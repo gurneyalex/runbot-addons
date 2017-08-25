@@ -119,8 +119,9 @@ class RunbotBuild(models.Model):
                 '-e', ('WEBLATE_TOKEN=%s' %
                        build.branch_id.repo_id.weblate_token),
                 '-e', ('WEBLATE_HOST=%s' %
-                       build.branch_id.repo_id.weblate_url)
-            ])
+                       build.branch_id.repo_id.weblate_url),
+                '-e', ('WEBLATE_SSH=%s' %
+                       build.branch_id.repo_id.weblate_ssh)])
             if build.branch_id.repo_id.weblate_languages:
                 wl_cmd_env.extend([
                     '-e', 'LANG_ALLOWED=%s' %
@@ -214,6 +215,7 @@ class RunbotBuild(models.Model):
                 'travisfile2dockerfile', repo_name,
                 branch_short_name, '--root-path=' + t2d_path,
                 '--exclude-after-success',
+                '--docker-image=%s' % build.repo_id.travis2docker_image,
             ]
             try:
                 path_scripts = t2d()

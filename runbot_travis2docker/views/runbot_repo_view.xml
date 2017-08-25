@@ -14,7 +14,12 @@
           <group name="travis2docker">
             <field name="is_travis2docker_build"/>
             <field name="travis2docker_test_disable" attrs="{'invisible': [('is_travis2docker_build', '=', False)]}"/>
+            <field name="travis2docker_image"
+                   attrs="{'invisible': [('is_travis2docker_build', '=', False)],
+                           'required': [('is_travis2docker_build', '=', True)]
+                           }"/>
             <field name="weblate_url"/>
+            <field name="weblate_ssh"/>
             <label for="weblate_token"/>
             <div class="o_row">
                 <field name="weblate_token"/>
