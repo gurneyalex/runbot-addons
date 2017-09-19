@@ -4,6 +4,7 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 
 import re
+import os
 
 import requests
 import subprocess
@@ -33,6 +34,31 @@ class RunbotBranch(models.Model):
                     dict(match.groupdict(), branch=branch['branch_name']))
         branch.name_weblate = name
 
+    @tools.ormcache('ssh')
+    def _ssh_keyscan(self, ssh):
+        """This function execute the command 'ssh-keysan' to avoid the question
+        when the command git fetch is excecuted.
+        The question is like to:
+            'Are you sure you want to continue connecting (yes/no)?'"""
+        cmd = ['ssh-keyscan', '-p']
+        match = re.search(
+            r'(ssh\:\/\/\w+@(?P<host>[\w\.]+))(:{0,1})(?P<port>(\d+))?',
+            ssh)
+        if not match:
+            return False
+        data = match.groupdict()
+        cmd.append(data['port'] or '22')
+        cmd.append(data['host'])
+        with open(os.path.expanduser('~/.ssh/known_hosts'), 'a+') as hosts:
+            new_keys = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
+            for key in new_keys.stdout:
+                if [line for line in hosts if (line.strip('\n') ==
+                                               key.strip('\n'))]:
+                    continue
+                hosts.write(key + '\n')
+        return True
+
     @tools.ormcache('url', 'token')
     def get_weblate_projects(self, url, token):
         """Find all projects and components that are on weblate url.
@@ -56,11 +82,18 @@ class RunbotBranch(models.Model):
                 break
             page += 1
         for project in items:
-            response = session.get('%s/projects/%s/components'
-                                   % (url, project['slug']))
-            response.raise_for_status()
-            data = response.json()
-            project['components'] = data['results']
+            components = []
+            page = 1
+            while True:
+                response = session.get('%s/projects/%s/components/?page=%s'
+                                       % (url, project['slug'], page))
+                response.raise_for_status()
+                data = response.json()
+                components.extend(data['results'] or [])
+                if not data['next']:
+                    break
+                page += 1
+            project['components'] = components
             projects.append(project)
         return projects
 
@@ -103,6 +136,7 @@ class RunbotBranch(models.Model):
                                                        url_repo])
                     except subprocess.CalledProcessError:
                         pass
+                    self._ssh_keyscan(branch.repo_id.weblate_ssh)
                     subprocess.check_output(cmd + ['fetch', remote])
                     diff = subprocess.check_output(
                         cmd + ['diff',
