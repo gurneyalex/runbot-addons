@@ -9,8 +9,8 @@ import subprocess
 import time
 import xmlrpclib
 
-from odoo.tests.common import TransactionCase
-from odoo.tools.misc import mute_logger
+from openerp.tests.common import TransactionCase
+from openerp.tools.misc import mute_logger
 
 _logger = logging.getLogger(__name__)
 
