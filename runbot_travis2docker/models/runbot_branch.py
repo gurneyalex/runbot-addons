@@ -8,7 +8,7 @@ import os
 
 import subprocess
 
-from odoo import models, tools
+from openerp import models, tools
 
 DEFAULT_SSH_PORT = 22
 
